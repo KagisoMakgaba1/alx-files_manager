@@ -1,4 +1,5 @@
 import dbClient from '../utils/db.js';
+import redisClient from '../utils/redis.js';
 import crypto from 'crypto';
 
 class UsersController {
@@ -28,6 +29,31 @@ class UsersController {
 
     // Return the newly created user with only email and id
     res.status(201).json({ id: result.insertedId, email });
+  }
+
+  static async getMe(req, res) {
+    const token = req.headers['x-token'];
+
+    // Check if the token exists in Redis
+    if (!token) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const redisKey = `auth_${token}`;
+    const userId = await redisClient.get(redisKey);
+
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Retrieve the user based on the userId
+    const user = await dbClient.db.collection('users').findOne({ _id: userId });
+    if (!user) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Return the user object (email and id only)
+    res.status(200).json({ id: user._id, email: user.email });
   }
 }
 
