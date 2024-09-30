@@ -1,16 +1,16 @@
 import { MongoClient } from 'mongodb';
 import dotenv from 'dotenv';
 
+dotenv.config();
+
 const host = process.env.DB_HOST || 'localhost';
 const port = process.env.DB_PORT || 27017;
 const database = process.env.DB_DATABASE || 'files_manager';
 const url = `mongodb://${host}:${port}`;
 
-dotenv.config();
-
 class DBClient {
-  constructor() {    
-    this.client = new MongoClient(url, { useNewUrlParser: true, useUnifiedTopology: true });
+  constructor() {
+    this.client = new MongoClient(url);
     this.client.connect()
       .then(() => {
         this.db = this.client.db(database);
@@ -21,7 +21,7 @@ class DBClient {
       });
   }
 
-  isAlive() {
+  async isAlive() {
     return this.client.isConnected();
   }
 
