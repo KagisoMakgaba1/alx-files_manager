@@ -1,15 +1,30 @@
+// API Server configuration
+
 import express from 'express';
-import router from './routes/index';
+import indexRoutes from './routes/index';
+import dbClient from './utils/db';
+import HTTPError from './utils/httpErrors';
+import redisClient from './utils/redis';
 
-const port = parseInt(process.env.PORT, 10) || 5000;
+const api = express();
+const port = process.env.PORT || 5000;
 
-const app = express();
+const checkApiAndDBHealth = async (req, res, next) => {
+  if (!(await dbClient.isAliveWithTimeout(5000))) {
+    return HTTPError.internalServerError(res);
+  }
 
-app.use(express.json());
-app.use('/', router);
+  if (!redisClient.isAlive()) {
+    return HTTPError.internalServerError(res);
+  }
 
-app.listen(port, () => {
-  console.log(`server running on port ${port}`);
+  return next();
+};
+
+api.use(checkApiAndDBHealth);
+api.use(express.json({ limit: '50mb' }));
+api.use('/', indexRoutes);
+
+api.listen(port, () => {
+  console.log(`Server is listening on port ${port}`);
 });
-
-export default app;
